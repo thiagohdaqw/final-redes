@@ -24,6 +24,9 @@ class Client():
         self.running = True
         self._run()
 
+    def close(self):
+        self.server.close()
+
     def _run(self):
         while self.running:
             inputs, outputs, exceptions = select.select(self.input_list,[],[])
