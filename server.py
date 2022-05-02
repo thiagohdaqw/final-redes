@@ -2,7 +2,7 @@ import socket
 import select
 import queue
 import pathlib
-from models import Message
+from message import Message
 
 
 class Server:
@@ -13,7 +13,7 @@ class Server:
     inputs: list[socket.socket]
     outputs: list[socket.socket]
     clients: list[socket.socket]
-    message_queues: dict[queue.Queue]
+    message_queues: dict[socket.socket, queue.Queue]
 
     connection_channel: dict[socket.socket, str]
     channel_connections: dict[str, list[socket.socket]]
@@ -114,20 +114,16 @@ class Server:
         file = pages_path / filename
 
         if file.exists():
-            status = b'200'
+            status = b'200 OK'
         else:
-            status = b'404'
+            status = b'404 Not Found'
             file = pages_path / 'notfound.html'
 
-        conn.sendall(b'HTTP/1.1 ' + status + b' OK\nConnection: Closed\n\n')
+        conn.sendall(b'HTTP/1.1 ' + status + b'\nConnection: Closed\n\n')
         conn.sendall(file.read_bytes())
+        
         self._close_connection(conn)
     
-    def _handle_websocket(self, conn, msg):
-        breakpoint()
-        conn.sendall(b'HTTP/1.1 101 Switching Protocols\nUpgrade: websocket\nConnection: Upgrade\nSec-WebSocket-Version: 13')
-        self._close_connection(conn)
-
     def _add_channel(self, channel, conn):
         if channel not in self.channel_connections:
             self.channel_connections[channel] = []
