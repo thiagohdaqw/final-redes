@@ -38,7 +38,7 @@ class Client():
             message = socks.recv(2048)
             try:
                 if message:
-                    print(message.decode("utf-8"), end='', flush=True)
+                    print(message.decode("utf-8"), end='')
                     return
             except Exception:
                 ...
