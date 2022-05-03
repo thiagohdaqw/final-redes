@@ -19,8 +19,6 @@ class Client():
         self.running = False
 
     def start(self):
-        join_channel = bytes(f'IN {self.channel}', 'utf-8')
-        self.server.send(join_channel)
         self.running = True
         self._run()
 
@@ -29,7 +27,7 @@ class Client():
 
     def _run(self):
         while self.running:
-            inputs, outputs, exceptions = select.select(self.input_list,[],[])
+            inputs, _, _ = select.select(self.input_list,[],[])
 
             for sock in inputs:
                 self._handle_input(sock)
@@ -38,14 +36,19 @@ class Client():
     def _handle_input(self, socks):
         if socks == self.server:
             message = socks.recv(2048)
-            if message:
-                print (f'Received: {message}')
-            else:
-                print("Server disconnect")
-                socks.close()
-                self.input_list.remove(socks)
-                self.running = False
+            try:
+                if message:
+                    print(message.decode("utf-8"), end='', flush=True)
+                    return
+            except Exception:
+                ...
+            self._exit_server()
         else:
             message = bytes(input(), 'utf-8')
             self.server.send(message)
-            print(f'Sent: {message}', flush=True)
+
+    def _exit_server(self):
+        print("Saindo do servidor...")
+        self.input_list.remove(self.server)
+        self.server.close()
+        self.running = False
