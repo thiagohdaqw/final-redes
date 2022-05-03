@@ -7,14 +7,12 @@ class Client():
     server: socket.socket
     ip: str
     port: int
-    channel: str
     input_list: list[socket.socket | TextIO]
     running: bool
     
-    def __init__(self, ip, port, channel):
+    def __init__(self, ip, port):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.connect((ip, port))
-        self.channel = channel
         self.input_list = [sys.stdin, self.server]
         self.running = False
 
@@ -32,7 +30,6 @@ class Client():
             for sock in inputs:
                 self._handle_input(sock)
 
-    
     def _handle_input(self, socks):
         if socks == self.server:
             message = socks.recv(2048)
