@@ -1,5 +1,5 @@
 import click
-from server import Server
+from server.server import Server
 
 @click.command()
 @click.option('--ip', '-i', default='127.0.0.1', help='Ip address of the server')

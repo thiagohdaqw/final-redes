@@ -1,11 +1,8 @@
 import socket
 import select
-import queue
 import pathlib
-from message import Message
-from channel import Channels
-
-
+from server.logger import logger
+from server.channel import Channels
 
 class Server:
     server: socket.socket
@@ -15,7 +12,6 @@ class Server:
     inputs: list[socket.socket]
     outputs: list[socket.socket]
     clients: list[socket.socket]
-
     channels: Channels
 
     def __init__(self, ip, port, max_connections):
@@ -30,6 +26,7 @@ class Server:
         self.channels = Channels(self.server, self.outputs)
 
     def start(self):
+        self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server.bind((self.ip, self.port))
         self.server.listen(self.max_connections)
         self._run()
@@ -42,19 +39,19 @@ class Server:
         self.server.close()
 
     def _run(self):
+        print("Aguardando em ", (self.ip, self.port))
+        
         while self.inputs:
-            print('\nEsperando próximo evento')
-            
             readable, writable, exceptional = select.select(self.inputs, self.outputs, [])
             
             for r in readable:
                 self._handle_input(r)
 
             for w in writable:
-                self.channels.send_mensage(w)
+                self.channels.send_channel_message(w)
 
-            for r in exceptional:
-                self._handle_exceptions(r)
+            for e in exceptional:
+                self._handle_exceptions(e)
 
     def _handle_input(self, input):
         if input is self.server:
@@ -75,23 +72,28 @@ class Server:
         self.inputs.append(connection)
         self.clients.append(connection)
 
+        connection.sendall(b"Conexao concluida. Digite --HELP para ajuda.\n")
         logger(s, "Nova conexão")
 
     def _manage_message(self, conn):
         data = conn.recv(1024)
-        if data:
-            msg = data.decode('utf-8')
-            if msg.startswith(Message.JOIN_CHANNEL):
-                channel = msg[len(Message.JOIN_CHANNEL):].strip()
-                self.channels.join_channel(conn, channel)
-                logger(conn, "Entrando na sala", channel)
-            elif msg.startswith(Message.HTTP_GET):
-                logger(conn, "Requisitando pagina", msg)
-                self._handle_http_get(conn, msg)
-            else:
-                self.channels.enqueue_mensage(conn, data)
-        else:
-            self._close_connection(conn)
+
+        try:
+            if data:
+                message = data.decode('utf-8')
+                if len(message.strip()) == 0:
+                    return
+
+                command = message.split()[0]
+                if command == "GET":
+                    logger(conn, "Requisitando pagina", data)
+                    self._handle_http_get(conn, data)
+                else:
+                    self.channels.manage_commands(conn, command, data)
+                return
+        except Exception:
+            logger(conn, "Desconectando...")
+        self._close_connection(conn)
 
     def _handle_http_get(self, conn, msg):
         method, filename, *headers = msg.split()
@@ -120,6 +122,3 @@ class Server:
         self.clients.remove(conn)
 
         conn.close()
-
-def logger(conn, *msg):
-    print(f"[{conn}]: ", msg)
