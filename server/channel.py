@@ -5,8 +5,8 @@ from dataclasses import dataclass
 Channel = str
 
 ChannelCommands = {
-    "--CREATE": "<NomeCanal> <CapacidadeDeUsuarios> <NomeUsuario> - Create Channel",
-    "--JOIN": "<NomeCanal> <NomeUsuario> - Join Channel",
+    "--CREATE <NomeCanal> <CapacidadeDeUsuarios> <NomeUsuario>": " - Create Channel",
+    "--JOIN <NomeCanal> <NomeUsuario>": " - Join Channel",
     "--OUT": "- Exit Channel",
     "--CHANNELS": "- List available channels",
     "--LIST": "- List user in channel",
@@ -152,7 +152,7 @@ class Channels:
     def send_channel_message(self, conn):
         try:
             user = self.users[conn]
-            next_msg = f"[{user.username}]: {user.messages.get_nowait()}\n"
+            next_msg = f"[{user.username}]: {user.messages.get_nowait()}"
             
             for user in filter(lambda c: c.connection != conn, self.channels[user.channel].users):
                 self.send_message(user.connection, next_msg)

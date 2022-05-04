@@ -72,7 +72,6 @@ class Server:
         self.inputs.append(connection)
         self.clients.append(connection)
 
-        connection.sendall(b"Conexao concluida. Digite --HELP para ajuda.\n")
         logger(s, "Nova conexão")
 
     def _manage_message(self, conn):
@@ -87,7 +86,7 @@ class Server:
                 command = message.split()[0]
                 if command == "GET":
                     logger(conn, "Requisitando pagina", data)
-                    self._handle_http_get(conn, data)
+                    self._handle_http_get(conn, message)
                 else:
                     self.channels.manage_commands(conn, command, data)
                 return
@@ -109,7 +108,6 @@ class Server:
 
         conn.sendall(b'HTTP/1.1 ' + status + b'\nConnection: Closed\n\n')
         conn.sendall(file.read_bytes())
-        
         self._close_connection(conn)
 
     def _close_connection(self, conn):

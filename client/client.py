@@ -17,6 +17,7 @@ class Client():
         self.running = False
 
     def start(self):
+        print("Conexao concluida. Digite --HELP para ajuda.\n")
         self.running = True
         self._run()
 
