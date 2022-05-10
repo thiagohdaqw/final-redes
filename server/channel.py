@@ -38,9 +38,8 @@ class Channels:
         self.users = {}
         self.channels = {}
 
-    def manage_commands(self, conn: socket.socket, command: str, data: bytearray):
-        message = data.decode("utf-8")
-        command = command.upper()
+    def manage_commands(self, conn: socket.socket, message: str):
+        command = message.split()[0].upper()
 
         if command == "--CREATE":
             self.create_channel(conn, message)

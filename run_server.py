@@ -1,10 +1,12 @@
 import click
 from server.socket_server import SocketServer
 from server.websocket_server import WebSocketServer
+from server.http_server import HttpServer
 
 SERVER_FACTORY = {
     'SOCKET': SocketServer,
-    'WEBSOCKET': WebSocketServer
+    'WEBSOCKET': WebSocketServer,
+    'HTTP': HttpServer
 }
 SERVER_FACTORY_KEYS = list(SERVER_FACTORY.keys())
 

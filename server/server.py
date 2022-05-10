@@ -80,3 +80,12 @@ class Server(ABC):
         self.clients.append(connection)
 
         logger(s, "Nova conexão")
+
+    def _close_connection(self, conn):
+        if conn in self.outputs:
+            self.outputs.remove(conn)
+
+        self.inputs.remove(conn)
+        self.clients.remove(conn)
+
+        conn.close()
