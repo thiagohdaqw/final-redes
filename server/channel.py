@@ -1,8 +1,6 @@
 import socket
 import queue
-from dataclasses import dataclass
-
-Channel = str
+from dataclasses import dataclass, field
 
 ChannelCommands = {
     "--CREATE <NomeCanal> <CapacidadeDeUsuarios> <NomeUsuario>": " - Create Channel",
@@ -17,46 +15,36 @@ ChannelCommands = {
 class User:
     username: str
     connection: socket.socket
-    channel: Channel
-    messages: queue.Queue
+    channel: str
+    messages: queue.Queue = field(default_factory=queue.Queue)
 
 @dataclass
 class Channel:
-    users : list[User]
     capacity: int
+    users : list[User] = field(default_factory=list)
 
+
+@dataclass
 class Channels:
     server: socket.socket
-    channels: dict[str, Channel]
-    users: dict[socket.socket, User]
     outputs: list[socket.socket]
-
-    def __init__(self, server, outputs):
-        self.server = server
-        self.outputs = outputs
-        self.message_queues = {}
-        self.users = {}
-        self.channels = {}
+    channels: dict[str, Channel] = field(default_factory=dict)
+    users: dict[socket.socket, User] = field(default_factory=dict)
 
     def manage_commands(self, conn: socket.socket, message: str):
         command = message.split()[0].upper()
 
         if command == "--CREATE":
-            self.create_channel(conn, message)
-            return
+            return self.create_channel(conn, message)
         elif command == "--JOIN":
-            self.join_channel(conn, message)
-            return
+            return self.join_channel(conn, message)
         elif command == "--HELP":
-            self.explain_commands(conn)
-            return
+            return self.explain_commands(conn)
         elif command == "--CHANNELS":
-            self.list_channels(conn)
-            return
+            return self.list_channels(conn)
 
         if not self.is_user_in_channel(conn):
-            self.send_server_message(conn, f"[ERRO] - E necessario entrar em uma sala para utilizar o camando {command}\n")
-            return
+            return self.send_server_message(conn, f"[ERRO] - E necessario entrar em uma sala para utilizar o camando {command}\n")
 
         if command == "--LIST":
             self.list_users(conn)
@@ -67,27 +55,24 @@ class Channels:
             
     def create_channel(self, conn, message):
         if len(message.split()) != 4:
-            self.send_server_message(conn, "[ERRO] - Formato invalido, tente --CREATE <NomeCanal> <CapacidadeDeUsuarios> <NomeUsuario>\n")
-            return
+            return self.send_server_message(conn, "[ERRO] - Formato invalido, tente --CREATE <NomeCanal> <CapacidadeDeUsuarios> <NomeUsuario>\n")
 
         _, channel_name, capacity, username = message.split()
         channel_name = channel_name.lower()
         try:
             capacity = int(capacity)
         except Exception:
-            self.send_server_message(conn, "[ERRO] - Formato invalido, capacidade de usuario deve ser um numero inteiro.\n")
-            return
+            return self.send_server_message(conn, "[ERRO] - Formato invalido, capacidade de usuario deve ser um numero inteiro.\n")
         
         if channel_name not in self.channels:
-            new_channel = Channel([], capacity)
+            new_channel = Channel(capacity)
             self.channels[channel_name] = new_channel
         else:
-            self.send_server_message(conn, "[ERRO] - Esse canal ja existe.\n")
-            return
+            return self.send_server_message(conn, "[ERRO] - Esse canal ja existe.\n")
         
         self.exit_channel(conn)
         
-        user = User(username, conn, channel_name, queue.Queue())
+        user = User(username, conn, channel_name)
         
         self.users[conn] = user
         self.channels[channel_name].users.append(user)
@@ -96,33 +81,28 @@ class Channels:
 
     def join_channel(self, conn, message):
         if len(message.split()) != 3:
-            self.send_server_message(conn, "[ERRO] - Formato invalido, tente --JOIN <NomeCanal> <NomeUsuario>\n")
-            return
+            return self.send_server_message(conn, "[ERRO] - Formato invalido, tente --JOIN <NomeCanal> <NomeUsuario>\n")
 
         _, channel_name, username = message.split()
         channel_name = channel_name.lower()
 
         if channel_name not in self.channels:
-            self.send_server_message(conn, "[ERRO] - Essa sala não existe, crie uma com o comando --CREATE <NomeCanal> <CapacidadeDeUsuarios> <NomeUsuario>\n")
-            return
+            return self.send_server_message(conn, "[ERRO] - Essa sala não existe, crie uma com o comando --CREATE <NomeCanal> <CapacidadeDeUsuarios> <NomeUsuario>\n")
         
         channel_typed = self.channels[channel_name]
 
         if(len(channel_typed.users) == channel_typed.capacity):
-            self.send_server_message(conn, f"[ERRO] - O canal \"{channel_name}\" esta cheio no momento. Entre em outro canal ou tente novamente mais tarde.\n")
-            return
+            return self.send_server_message(conn, f"[ERRO] - O canal \"{channel_name}\" esta cheio no momento. Entre em outro canal ou tente novamente mais tarde.\n")
 
         if conn in self.users and self.users[conn].channel == channel_name:
-            self.send_server_message(conn, "[ERRO] - Voce ja esta no canal informado.\n")
-            return        
+            return self.send_server_message(conn, "[ERRO] - Voce ja esta no canal informado.\n")
         
         if self.is_username_repeated(username, channel_typed.users):
-            self.send_server_message(conn, "[ERRO] - Esse nome ja existe nessa sala, tente novamente com outro.\n")
-            return
+            return self.send_server_message(conn, "[ERRO] - Esse nome ja existe nessa sala, tente novamente com outro.\n")
         
         self.exit_channel(conn)
         
-        user = User(username, conn, channel_name, queue.Queue())
+        user = User(username, conn, channel_name)
         
         self.users[conn] = user
         channel_typed.users.append(user)

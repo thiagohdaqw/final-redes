@@ -10,7 +10,7 @@ class SocketServer(HttpServer):
         self.channels = Channels(self.server, self.outputs)
 
     def _handle_writable(self, sock: socket.socket):
-        self.channels.manage_commands(sock)
+        self.channels.send_channel_message(sock)
 
     def _handle_message(self, conn: socket.socket, message: str):
         self.channels.manage_commands(conn, message)
