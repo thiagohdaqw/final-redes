@@ -12,7 +12,7 @@ class SocketServer(HttpServer):
     def _handle_writable(self, sock: socket.socket):
         self.channels.send_channel_message(sock)
 
-    def _handle_message(self, conn: socket.socket, message: str):
+    def _handle_message(self, conn: socket.socket, message: str, data: bytes):
         self.channels.manage_commands(conn, message)
 
     def _close_connection(self, conn):

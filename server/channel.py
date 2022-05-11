@@ -1,15 +1,28 @@
 import socket
 import queue
 from dataclasses import dataclass, field
+from typing import NamedTuple
 
-ChannelCommands = {
-    "--CREATE <NomeCanal> <CapacidadeDeUsuarios> <NomeUsuario>": " - Create Channel",
-    "--JOIN <NomeCanal> <NomeUsuario>": " - Join Channel",
-    "--OUT": "- Exit Channel",
-    "--CHANNELS": "- List available channels",
-    "--LIST": "- List user in channel",
-    "--HELP": "- Show all commands description"
-}
+
+class Command(NamedTuple):
+    value: str
+    params: str
+    help: str
+
+    def __eq__(self, other):
+        return self.value == other
+
+    def __str__(self):
+        return f'{self.value} {self.params}'.strip()
+
+class Commands:
+    CREATE   = Command('/CREATE', '<NomeCanal> <CapacidadeDeUsuarios> <NomeUsuario>', 'Create Channel')
+    JOIN     = Command('/JOIN', '<NomeCanal> <NomeUsuario>', 'Join Channel')
+    OUT      = Command('/OUT', '', 'Exit Channel')
+    CHANNELS = Command('/CHANNELS', '', 'List available channels')
+    LIST     = Command('/LIST', '', 'List user in channel')
+    HELP     = Command('/HELP', '', 'Show all commands description')
+
 
 @dataclass
 class User:
@@ -34,28 +47,28 @@ class Channels:
     def manage_commands(self, conn: socket.socket, message: str):
         command = message.split()[0].upper()
 
-        if command == "--CREATE":
+        if command == Commands.CREATE:
             return self.create_channel(conn, message)
-        elif command == "--JOIN":
+        elif command == Commands.JOIN:
             return self.join_channel(conn, message)
-        elif command == "--HELP":
+        elif command == Commands.HELP:
             return self.explain_commands(conn)
-        elif command == "--CHANNELS":
+        elif command == Commands.CHANNELS:
             return self.list_channels(conn)
 
         if not self.is_user_in_channel(conn):
             return self.send_server_message(conn, f"[ERRO] - E necessario entrar em uma sala para utilizar o camando {command}\n")
 
-        if command == "--LIST":
+        if command == Commands.LIST:
             self.list_users(conn)
-        elif command == "--OUT":
+        elif command == Commands.OUT:
             self.exit_channel(conn)
         else:
             self.enqueue_message(conn, message)
             
     def create_channel(self, conn, message):
         if len(message.split()) != 4:
-            return self.send_server_message(conn, "[ERRO] - Formato invalido, tente --CREATE <NomeCanal> <CapacidadeDeUsuarios> <NomeUsuario>\n")
+            return self.send_server_message(conn, f"[ERRO] - Formato invalido, tente {Commands.CREATE}\n")
 
         _, channel_name, capacity, username = message.split()
         channel_name = channel_name.lower()
@@ -81,13 +94,13 @@ class Channels:
 
     def join_channel(self, conn, message):
         if len(message.split()) != 3:
-            return self.send_server_message(conn, "[ERRO] - Formato invalido, tente --JOIN <NomeCanal> <NomeUsuario>\n")
+            return self.send_server_message(conn, f"[ERRO] - Formato invalido, tente {Commands.JOIN}\n")
 
         _, channel_name, username = message.split()
         channel_name = channel_name.lower()
 
         if channel_name not in self.channels:
-            return self.send_server_message(conn, "[ERRO] - Essa sala não existe, crie uma com o comando --CREATE <NomeCanal> <CapacidadeDeUsuarios> <NomeUsuario>\n")
+            return self.send_server_message(conn, f"[ERRO] - Essa sala não existe, crie uma com o comando {Commands.Create}\n")
         
         channel_typed = self.channels[channel_name]
 
@@ -139,7 +152,11 @@ class Channels:
             self.outputs.remove(conn)
     
     def explain_commands(self, conn):
-        self.send_server_message(conn, "\n".join(f"{command} {message}" for command, message in ChannelCommands.items()) + "\n")
+        formatter = lambda c: f'{c} - {c.help}' 
+        commands = (getattr(Commands, name) for name in dir(Commands) if not name.startswith('_'))
+        commands_help = "\n".join(formatter(c) for c in commands) + "\n"
+
+        self.send_server_message(conn, commands_help)
 
     def list_users(self, conn):
         channel = self.users[conn].channel
@@ -173,4 +190,3 @@ class Channels:
             if user.username == username:
                 return True
         return False
-        
