@@ -82,6 +82,7 @@ class Server(ABC):
         logger(s, "Nova conexão")
 
     def _close_connection(self, conn):
+        logger(conn, "Desconectado")
         if conn in self.outputs:
             self.outputs.remove(conn)
 

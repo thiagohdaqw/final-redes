@@ -3,39 +3,49 @@ import pathlib
 from .server import Server
 from .logger import logger
 
+class Methods:
+    GET = "GET"
+    POST = "POST"
+
 
 class HttpServer(Server):
     def __init__(self, ip, port, max_connections):
         super().__init__(ip, port, max_connections)
 
-    def _handle_message(self, sock: socket.socket, message: str):
+    def _handle_message(self, sock: socket.socket, message: str, data: bytes):
         ...
 
     def _handle_writable(self, sock: socket.socket):
         ...
 
     def _manage_message(self, conn: socket.socket):
-        data = conn.recv(1024)
+        data = conn.recv(2048)
 
         try:
             if data:
-                message = data.decode("utf-8")
-                if len(message.strip()) == 0:
-                    return
-
-                command = message.split()[0]
-                if command == "GET":
-                    logger(conn, "Requisitando pagina", data)
-                    self._handle_http_get(conn, message)
-                else:
-                    self._handle_message(conn, message)
-                return
+                return self._manage_data(conn, data)
         except Exception:
-            logger(conn, "Desconectando...")
+            ...
         self._close_connection(conn)
 
-    def _handle_http_get(self, conn, msg):
-        method, filename, *headers = msg.split()
+    def _manage_data(self, conn: socket.socket, data: bytes):
+        message = self._decode_data(data)
+
+        if len(message.strip()) == 0:
+            return
+
+        command = message.split()[0]
+        if command == Methods.GET:
+            logger(conn, "Requisição GET", data)
+            method, filename, *headers = message.split()
+            self._handle_http_get(conn, filename, headers)
+        else:
+            self._handle_message(conn, message, data)
+
+    def _decode_data(self, data: bytes):
+        return data.decode("utf-8")
+
+    def _handle_http_get(self, conn, filename, headers):
         filename = "index.html" if filename == "/" else filename[1:]
         pages_path = pathlib.Path("./pages")
         file = pages_path / filename
