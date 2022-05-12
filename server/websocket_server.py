@@ -1,3 +1,6 @@
+import socket
+import sys
+from typing import TextIO
 from .http_server import HttpServer
 from . import websocket as ws
 
@@ -5,6 +8,7 @@ from . import websocket as ws
 class WebSocketServer(HttpServer):
     def __init__(self, ip, port, max_connections):
         super().__init__(ip, port, max_connections)
+        self.inputs.append(sys.stdin)
 
     def _handle_http_get(self, conn, filename, headers):
         if filename == "/chat":
@@ -32,3 +36,15 @@ class WebSocketServer(HttpServer):
         print("-" * 50)
         print(message)
         print("-" * 50)
+
+    def _manage_textio(self, input: TextIO):
+        byte_max = 255
+        msg = input.readline()[:byte_max].encode("utf-8")
+
+        int_to_bytes = lambda i, l=1: i.to_bytes(l, 'big')
+        length = int_to_bytes(len(msg))
+        op = int_to_bytes(ws.Codes.MESSAGE)
+        response = op + length + msg
+
+        for client in self.clients:
+            client.sendall(response)

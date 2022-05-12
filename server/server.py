@@ -1,6 +1,7 @@
 import socket
 import select
 from abc import ABC, abstractclassmethod
+from typing import TextIO
 from .logger import logger
 
 
@@ -9,7 +10,7 @@ class Server(ABC):
     ip: str
     port: int
     max_connections: int
-    inputs: list[socket.socket]
+    inputs: list[socket.socket | TextIO]
     outputs: list[socket.socket]
     clients: list[socket.socket]
 
@@ -52,19 +53,24 @@ class Server(ABC):
             for e in exceptional:
                 self._handle_exceptions(e)
 
+    def _manage_textio(self, input: TextIO):
+        ...
+
     @abstractclassmethod
     def _manage_message(self, sock: socket.socket):
         ...
 
     @abstractclassmethod
-    def _handle_writable(self, sock: socket.socket):
+    def _handle_writable(self, output: socket.socket):
         ...
 
-    def _handle_readable(self, sock: socket.socket):
-        if sock is self.server:
-            self._manage_connection(sock)
+    def _handle_readable(self, input: socket.socket | TextIO):
+        if input is self.server:
+            self._manage_connection(input)
+        elif isinstance(input, socket.socket):
+            self._manage_message(input)
         else:
-            self._manage_message(sock)
+            self._manage_textio(input)
 
     def _handle_exceptions(self, exceptions: socket.socket):
         self.inputs.remove(exceptions)

@@ -1,4 +1,5 @@
 import socket
+from typing import TextIO
 from .http_server import HttpServer
 from .channel import Channels
 
@@ -9,8 +10,8 @@ class SocketServer(HttpServer):
         super().__init__(ip, port, max_connections)
         self.channels = Channels(self.server, self.outputs)
 
-    def _handle_writable(self, sock: socket.socket):
-        self.channels.send_channel_message(sock)
+    def _handle_writable(self, output: socket.socket):
+        self.channels.send_channel_message(output)
 
     def _handle_message(self, conn: socket.socket, message: str, data: bytes):
         self.channels.manage_commands(conn, message)

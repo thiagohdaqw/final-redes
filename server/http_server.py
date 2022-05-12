@@ -1,5 +1,6 @@
 import socket
 import pathlib
+from typing import TextIO
 from .server import Server
 from .logger import logger
 
@@ -15,7 +16,7 @@ class HttpServer(Server):
     def _handle_message(self, sock: socket.socket, message: str, data: bytes):
         ...
 
-    def _handle_writable(self, sock: socket.socket):
+    def _handle_writable(self, output: socket.socket):
         ...
 
     def _manage_message(self, conn: socket.socket):
