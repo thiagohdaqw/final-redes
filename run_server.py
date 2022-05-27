@@ -1,16 +1,30 @@
 import click
-from server.server import Server
+from server.channel_server import ChannelServer
+from server.websocket_server import WebSocketServer
+from server.http_server import HttpServer
+
+SERVER_FACTORY = {
+    'CHANNEL': ChannelServer,
+    'WEBSOCKET': WebSocketServer,
+    'HTTP': HttpServer
+}
+SERVER_FACTORY_KEYS = list(SERVER_FACTORY.keys())
+
 
 @click.command()
-@click.option('--ip', '-i', default='127.0.0.1', help='Ip address of the server')
-@click.option('--port', '-p', default=7777, help='Port of the server')
-@click.option('--max', '-m', default=10, help='Max connections of the server')
-def main(ip, port, max):
+@click.option('--ip', '-i', default='127.0.0.1', help='Ip address of the server', show_default=True)
+@click.option('--port', '-p', default=7777, help='Port of the server', show_default=True)
+@click.option('--max', '-m', default=10, help='Max connections of the server', show_default=True)
+@click.option('--type', '-t', default=SERVER_FACTORY_KEYS[0], type=click.Choice(SERVER_FACTORY_KEYS, case_sensitive=False), help='Type of the server' ,show_default=True)
+def main(ip, port, max, type):
+    server = SERVER_FACTORY[type](ip, port, max)
+    
     try:
-        server = Server(ip, port, max)
         server.start()
     except KeyboardInterrupt:
+        print("Finalizando...")
+    finally:
         server.close()
-        
+
 if __name__ == '__main__':
     main()
