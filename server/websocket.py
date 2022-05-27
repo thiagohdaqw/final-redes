@@ -45,7 +45,6 @@ def decode_data(data: bytes) -> str:
         mask = data[2:6]
         payload = data[6:]
     elif payload_length == PAYLOAD_MAX_LENGTH:
-        breakpoint()
         mask = data[4:8]
         payload = data[8:]
     else:
