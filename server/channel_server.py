@@ -1,14 +1,13 @@
 import socket
-from typing import TextIO
-from .http_server import HttpServer
+from .websocket_server import WebSocketServer
 from .channel import Channels
 
-class SocketServer(HttpServer):
+class ChannelServer(WebSocketServer):
     channels: Channels
 
     def __init__(self, ip, port, max_connections):
         super().__init__(ip, port, max_connections)
-        self.channels = Channels(self.server, self.outputs)
+        self.channels = Channels(self.send_message, self.outputs)
 
     def _handle_writable(self, output: socket.socket):
         self.channels.send_channel_message(output)

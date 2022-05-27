@@ -1,10 +1,10 @@
 import click
-from server.socket_server import SocketServer
+from server.channel_server import ChannelServer
 from server.websocket_server import WebSocketServer
 from server.http_server import HttpServer
 
 SERVER_FACTORY = {
-    'SOCKET': SocketServer,
+    'CHANNEL': ChannelServer,
     'WEBSOCKET': WebSocketServer,
     'HTTP': HttpServer
 }

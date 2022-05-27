@@ -1,7 +1,7 @@
 import socket
 import queue
 from dataclasses import dataclass, field
-from typing import NamedTuple
+from typing import Callable, NamedTuple
 
 
 class Command(NamedTuple):
@@ -39,7 +39,7 @@ class Channel:
 
 @dataclass
 class Channels:
-    server: socket.socket
+    send_message: Callable[[socket.socket, str], None]
     outputs: list[socket.socket]
     channels: dict[str, Channel] = field(default_factory=dict)
     users: dict[socket.socket, User] = field(default_factory=dict)
@@ -169,18 +169,13 @@ class Channels:
         msg = f"LISTA DE CANAIS DISPONIVEIS ({len(self.channels)}):\n" if len(self.channels) > 0 else "NAO HA CANAIS DISPONIVEIS.\n"
         msg += "".join(f"- {channel}\n" for channel in self.channels)
         self.send_server_message(conn, msg)
-        
-    def send_message(self, conn, message):
-        if type(message) == str:
-            message = message.encode("utf-8")
-        conn.sendall(message)
 
     def send_server_message(self, conn, text):
         message = "---------------------------------------\n"
         message += text
         message += "---------------------------------------\n"
-        message = message.encode("utf-8")
-        conn.sendall(message)
+        message = message
+        self.send_message(conn, message)
 
     def is_user_in_channel(self, conn):
         return conn in self.users

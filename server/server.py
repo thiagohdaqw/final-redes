@@ -36,6 +36,11 @@ class Server(ABC):
             client.close()
         self.server.close()
 
+    def send_message(self, conn: socket.socket, message: str):
+        print("Enviando", message)
+        message_encoded = self._encode_message(message)
+        conn.sendall(message_encoded)
+
     def _run(self):
         print("Aguardando em ", (self.ip, self.port))
 
@@ -62,6 +67,10 @@ class Server(ABC):
 
     @abstractclassmethod
     def _handle_writable(self, output: socket.socket):
+        ...
+
+    @abstractclassmethod
+    def _encode_message(self, message: str):
         ...
 
     def _handle_readable(self, input: socket.socket | TextIO):
