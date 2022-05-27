@@ -1,4 +1,3 @@
-import socket
 import sys
 from typing import TextIO
 from .http_server import HttpServer
@@ -26,11 +25,16 @@ class WebSocketServer(HttpServer):
         conn.sendall(response)
 
     def _decode_data(self, data: bytes):
+        if data[0] == ws.Codes.CLOSE:
+            raise Exception("Fechar conexão")
         if data[0] == ws.Codes.MESSAGE:
             return ws.decode_data(data)
         else:
             print("\n", data, "\n")
             return super()._decode_data(data)
+
+    def _encode_message(self, message: str):
+        return ws.encode_message(message)
 
     def _handle_message(self, sock, message: str, data: bytes):
         print("-" * 50)
@@ -38,13 +42,7 @@ class WebSocketServer(HttpServer):
         print("-" * 50)
 
     def _manage_textio(self, input: TextIO):
-        byte_max = 255
-        msg = input.readline()[:byte_max].encode("utf-8")
-
-        int_to_bytes = lambda i, l=1: i.to_bytes(l, 'big')
-        length = int_to_bytes(len(msg))
-        op = int_to_bytes(ws.Codes.MESSAGE)
-        response = op + length + msg
+        msg = '[SERVER]: ' + input.readline()
 
         for client in self.clients:
-            client.sendall(response)
+            self.send_message(client, msg)

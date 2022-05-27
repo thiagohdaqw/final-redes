@@ -25,8 +25,8 @@ class HttpServer(Server):
         try:
             if data:
                 return self._manage_data(conn, data)
-        except Exception:
-            ...
+        except Exception as ex:
+            print("[EXCEPTION]:", ex)
         self._close_connection(conn)
 
     def _manage_data(self, conn: socket.socket, data: bytes):
@@ -45,6 +45,9 @@ class HttpServer(Server):
 
     def _decode_data(self, data: bytes):
         return data.decode("utf-8")
+
+    def _encode_message(self, message: str):
+        return message.encode("utf-8")
 
     def _handle_http_get(self, conn, filename, headers):
         filename = "index.html" if filename == "/" else filename[1:]
