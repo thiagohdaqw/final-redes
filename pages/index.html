@@ -18,14 +18,21 @@
             <input id="connection-string" value="ws://localhost:7777/chat">
             <button onclick="connect()">Conectar</button>
         </div>
-
+        
         <div id="chat">
         </div>
         <input id="chat-input" type="text">
-
+        
+        <div class="webcams">
+            <video id="video" class="webcam"></video>
+            <canvas id="canvas" class="webcam"></canvas>
+            <img id="img" class="webcam"></img>
+        </div>
     </main>
+
 </body>
 
+<script type="text/javascript" src="webcam.js"></script>
 <script type="text/javascript" src="chat.js"></script>
 
 </html>
