@@ -37,8 +37,8 @@ class Server(ABC):
             client.close()
         self.server.close()
 
-    def send_message(self, conn: socket.socket, *messages):
-        message_encoded = self._encode_messages(messages)
+    def send_message(self, conn: socket.socket, message):
+        message_encoded = self._encode_message(message)
         conn.sendall(message_encoded)
 
     def _run(self):
@@ -67,7 +67,7 @@ class Server(ABC):
         ...
 
     @abstractclassmethod
-    def _encode_messages(self, messages: list[str | bytes]):
+    def _encode_message(self, message: str):
         ...
 
     def _handle_readable(self, input: socket.socket | TextIO):

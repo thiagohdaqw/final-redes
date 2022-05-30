@@ -2,6 +2,7 @@ MessageTypes = {
     MESSAGE: 'M:',
     WEBCAM: 'W:',
     AUDIO: 'A:',
+    EXIT: 'E:'
 }
 
 Commands = {
@@ -69,18 +70,22 @@ function onOpen(ev) {
 
 function onMessage(ev) {
     let msg = ev.data;
+    const equals = com => msg.startsWith(com)
 
-    if (msg.startsWith('W'))
+    if (equals(MessageTypes.WEBCAM))
         return manageWebcamResponse(msg);
-    if (msg.startsWith('/'))
+    if (equals(MessageTypes.EXIT))
+        return manageUserExit(msg);
+    if (equals('/'))
         return manageCommandResponse(msg);
-    if (msg.startsWith(MessageTypes.MESSAGE))
+    if (equals(MessageTypes.MESSAGE))
         msg = msg.slice(2, msg.length);
     addChatMessage(msg);
 }
 
 function onClose(ev) {
     isInChannel = false;
+    deleteAllUsersWebcams();
     addChatMessage("[SERVER]: Desconectando...");
 }
 
@@ -91,8 +96,12 @@ function onError(ev) {
 }
 
 function manageCommandResponse(msg) {
-    equals = com => msg.startsWith(com)
-    isInChannel = !equals(Commands.EXIT)
+    const equals = com => msg.startsWith(com);
+    isInChannel = !equals(Commands.EXIT);
+
+    if (!isInChannel) {
+        deleteAllUsersWebcams();
+    }
 }
 
 function manageWebcamResponse(msg) {
@@ -105,6 +114,23 @@ function manageWebcamResponse(msg) {
         usersWebcams[username] = img;
     }
     setImgSrc(img, dataUrl);
+}
+
+function manageUserExit(msg) {
+    let [username, _] = getUsername(msg);
+    
+    if (usersWebcams[username]) {
+        deleteImg(usersWebcams[username]);
+        delete usersWebcams[username];
+    }
+    addChatMessage(msg.slice(2, msg.length));
+}
+
+function deleteAllUsersWebcams() {
+    for ([username, webcam] of Object.entries(usersWebcams)){
+        deleteImg(webcam);
+        delete usersWebcams[username];
+    }
 }
 
 function addChatMessage(text, isPersonal = false) {

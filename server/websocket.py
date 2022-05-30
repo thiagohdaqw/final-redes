@@ -58,19 +58,8 @@ def decode_bytes(payload, mask):
         decoded = value ^ mask[index % 4]
         yield chr(decoded)
 
-def join_messages(messages):
-    message = b''
-    for msg in messages:
-        if isinstance(msg, str):
-            message += msg.encode('utf-8')
-        elif isinstance(msg, bytes):
-            message += msg
-        else:
-            message += str(msg).encode('utf-8')
-    return message
-
-def encode_messages(messages) -> bytes:
-    msg_bytes = join_messages(messages)
+def encode_message(message) -> bytes:
+    msg_bytes = str(message).encode('utf-8')
     msg_length = len(msg_bytes)
 
     op = int_to_bytes(Codes.MESSAGE)

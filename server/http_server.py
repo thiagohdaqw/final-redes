@@ -11,7 +11,7 @@ class HttpServer(Server):
         self.routes = [self._route_send_file]
 
     _decode_data    = lambda _, data: http.decode_data(data)
-    _encode_messages = lambda _, messages: http.encode_messages(messages)
+    _encode_message = lambda _, message: http.encode_message(message)
 
     def _handle_writable(self, output: socket.socket):
         ...

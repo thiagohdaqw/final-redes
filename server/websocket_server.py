@@ -17,7 +17,7 @@ class WebSocketServer(HttpServer):
         response = ws.build_handshake_response(client_key)
         conn.sendall(response)
 
-    _encode_messages = lambda _, messages: ws.encode_messages(messages)
+    _encode_message = lambda _, message: ws.encode_message(message)
 
     def _decode_data(self, data: bytes):
         if data[0] == ws.Codes.CLOSE:

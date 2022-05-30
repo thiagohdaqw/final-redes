@@ -42,3 +42,7 @@ function createWebcamElement(dataUrl) {
 function setImgSrc(img, dataUrl) {
     img.setAttribute('src', dataUrl);
 }
+
+function deleteImg(img) {
+    webcams.removeChild(img);
+}

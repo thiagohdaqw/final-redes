@@ -18,7 +18,6 @@ class ChannelServer(WebSocketServer):
     def _intercept_message(self, conn, message):
         webcam_data = "data:image/jpeg;"
         if message.startswith(webcam_data):
-            print("recebi webcam")
             self.channels.manage_data(conn, message, MessageType.WEBCAM)
             return True
         return False

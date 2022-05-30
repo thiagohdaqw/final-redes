@@ -12,16 +12,8 @@ Route = list[Callable[[socket, str, bytes], bool]]
 def decode_data(data: bytes):
     return data.decode("utf-8")
 
-def encode_messages(messages):
-    message = b''
-    for msg in messages:
-        if isinstance(msg, str):
-            message += msg.encode('utf-8')
-        elif isinstance(msg, bytes):
-            message += msg
-        else:
-            message += str(msg).encode('utf-8')
-    return message
+def encode_message(message):
+    return str(message).encode('utf-8')
 
 def HttpRoute(method: Methods = Methods.GET, route: str = None):
     comp = method.value + ' '

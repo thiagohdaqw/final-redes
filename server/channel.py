@@ -41,11 +41,11 @@ class MessageType(Enum):
     MESSAGE = 'M'
     WEBCAM  = 'W'
     AUDIO   = 'A'
-
+    EXIT    = 'E'
 
 @dataclass
 class Channels:
-    send_message: Callable
+    send_message: Callable[[socket.socket, str], None]
     outputs: list[socket.socket]
     channels: dict[str, Channel] = field(default_factory=dict)
     users: dict[socket.socket, User] = field(default_factory=dict)
@@ -106,7 +106,7 @@ class Channels:
         channel_name = channel_name.lower()
 
         if channel_name not in self.channels:
-            return self.send_server_message(conn, f"[ERRO] - Essa sala não existe, crie uma com o comando {Commands.Create}\n")
+            return self.send_server_message(conn, f"[ERRO] - Essa sala não existe, crie uma com o comando {Commands.CREATE}\n")
         
         channel_typed = self.channels[channel_name]
 
@@ -134,7 +134,7 @@ class Channels:
             return
 
         user = self.users[conn]
-        user.messages.put(("Saiu da sala\n", MessageType.MESSAGE))
+        user.messages.put(("Saiu da sala\n", MessageType.EXIT))
         self.send_channel_message(conn)
         if len(self.channels[user.channel].users) > 1:
             self.channels[user.channel].users.remove(user)
@@ -196,9 +196,10 @@ class Channels:
             message, type = user.messages.get_nowait()
             
             prefix = f'{type.value}:[{user.username}]: '
+            message = prefix + message
             
             for user in filter(lambda c: c.connection != conn, self.channels[user.channel].users):
-                self.send_message(user.connection, prefix, message)
+                self.send_message(user.connection, message)
 
         except queue.Empty:
             self.outputs.remove(conn)
