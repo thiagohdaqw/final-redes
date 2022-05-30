@@ -1,33 +1,44 @@
-video = document.querySelector('#video');
-img = document.querySelector("#img");
-canvas = document.querySelector("#canvas");
+video = document.getElementById('video');
+canvas = document.getElementById("canvas-webcam");
 canvas2d = canvas.getContext('2d');
 
-WIDTH = 400;
-HEIGHT = 300;
+webcams = document.getElementById("webcams");
+
+onWebcamCapture = null;
+
 FPS = 6;
 
 navigator.mediaDevices.getUserMedia({video: true})
     .then(mediaStream => {
         video.srcObject = mediaStream;
         video.play();
-        addInterval();
+        captureWebcam();
     })
     .catch(err => {
         console.log('Não há permissões para acessar a webcam')
         console.log(err);
     })
 
-function addInterval() {
+function captureWebcam() {
     setInterval(() => {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas2d.drawImage(video, 0, 0);
-        renderBlob(canvas.toDataURL('image/jpeg', 0.1));
+        if (onWebcamCapture != null) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas2d.drawImage(video, 0, 0);
+            onWebcamCapture(canvas.toDataURL('image/jpeg', 0.1));
+            canvas2d.clearRect(0, 0, canvas.width, canvas.height);
+        }
     }, 1000/FPS);
 }
 
-function renderBlob(dataURL) {
-    console.log(dataURL.length);
-    img.setAttribute('src', dataURL);
+function createWebcamElement(dataUrl) {
+    let img = document.createElement('img');
+
+    img.setAttribute('class', 'webcam');
+    webcams.appendChild(img);
+    return img;
+}
+
+function setImgSrc(img, dataUrl) {
+    img.setAttribute('src', dataUrl);
 }

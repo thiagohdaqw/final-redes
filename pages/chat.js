@@ -1,7 +1,22 @@
-socket = null;
+MessageTypes = {
+    MESSAGE: 'M:',
+    WEBCAM: 'W:',
+    AUDIO: 'A:',
+}
+
+Commands = {
+    CREATE: '/CREATE',
+    JOIN: '/JOIN',
+    EXIT: '/EXIT'
+}
 
 chatElement = document.getElementById("chat");
 chatInputElement = document.getElementById("chat-input");
+
+socket = null;
+
+usersWebcams = {};
+isInChannel = false;
 
 function connect() {
     if (socket != null) {
@@ -39,22 +54,57 @@ function sendMessage(text) {
     }
 }
 
+onWebcamCapture = data => {
+    if (!isInChannel) {
+        return;
+    }
+    console.log(data.length)
+    socket.send(data);
+};
+
 function onOpen(ev) {
     addChatMessage("[SERVER]: Conexão realizada com sucesso!")
     addChatMessage("[SERVER]: Digite /help para descobrir os comandos")
 }
 
 function onMessage(ev) {
-    addChatMessage(ev.data);
+    let msg = ev.data;
+
+    if (msg.startsWith('W'))
+        return manageWebcamResponse(msg);
+    if (msg.startsWith('/'))
+        return manageCommandResponse(msg);
+    if (msg.startsWith(MessageTypes.MESSAGE))
+        msg = msg.slice(2, msg.length);
+    addChatMessage(msg);
 }
 
 function onClose(ev) {
+    isInChannel = false;
     addChatMessage("[SERVER]: Desconectando...");
 }
 
 function onError(ev) {
     console.log(ev);
+    isInChannel = false;
     addChatMessage("[SERVER_ERROR]" + ev.toString());
+}
+
+function manageCommandResponse(msg) {
+    equals = com => msg.startsWith(com)
+    isInChannel = !equals(Commands.EXIT)
+}
+
+function manageWebcamResponse(msg) {
+    let [username, index] = getUsername(msg);
+    let img = usersWebcams[username];
+    const dataUrl = msg.slice(index+2, msg.length);
+
+    if (!img) {
+        img = createWebcamElement(dataUrl)
+        usersWebcams[username] = img;
+    }
+    setImgSrc(img, dataUrl);
 }
 
 function addChatMessage(text, isPersonal = false) {
@@ -78,4 +128,13 @@ function addChatMessage(text, isPersonal = false) {
 
 function socketClosed() {
     return socket == null || socket.readyState == socket.CLOSED;
+}
+
+function getUsername(msg) {
+    let i = 3;
+    let username = '';
+    while (msg[i] != ']' && msg[i+1] != ':') {
+        username += msg[i++];
+    }
+    return [username, i];
 }
