@@ -1,5 +1,6 @@
 import socket
 import select
+import sys
 from abc import ABC, abstractclassmethod
 from typing import TextIO
 from .logger import logger
@@ -20,7 +21,7 @@ class Server(ABC):
         self.ip = ip
         self.port = port
         self.max_connections = max_connections
-        self.inputs = [self.server]
+        self.inputs = [self.server, sys.stdin]
         self.outputs = []
         self.clients = []
 
@@ -36,9 +37,8 @@ class Server(ABC):
             client.close()
         self.server.close()
 
-    def send_message(self, conn: socket.socket, message: str):
-        print("Enviando", message)
-        message_encoded = self._encode_message(message)
+    def send_message(self, conn: socket.socket, *messages):
+        message_encoded = self._encode_messages(messages)
         conn.sendall(message_encoded)
 
     def _run(self):
@@ -58,9 +58,6 @@ class Server(ABC):
             for e in exceptional:
                 self._handle_exceptions(e)
 
-    def _manage_textio(self, input: TextIO):
-        ...
-
     @abstractclassmethod
     def _manage_message(self, sock: socket.socket):
         ...
@@ -70,7 +67,7 @@ class Server(ABC):
         ...
 
     @abstractclassmethod
-    def _encode_message(self, message: str):
+    def _encode_messages(self, messages: list[str | bytes]):
         ...
 
     def _handle_readable(self, input: socket.socket | TextIO):
@@ -95,6 +92,12 @@ class Server(ABC):
         self.clients.append(connection)
 
         logger(s, "Nova conexão")
+
+    def _manage_textio(self, input: TextIO):
+        msg = '[SERVER]: ' + input.readline()
+
+        for client in self.clients:
+            self.send_message(client, msg)
 
     def _close_connection(self, conn):
         logger(conn, "Desconectado")
