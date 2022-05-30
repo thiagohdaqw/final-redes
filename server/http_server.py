@@ -1,26 +1,29 @@
 import socket
 import pathlib
-from typing import TextIO
 from .server import Server
-from .logger import logger
-
-class Methods:
-    GET = "GET"
-    POST = "POST"
-
+from . import http
 
 class HttpServer(Server):
+    routes: list[http.Route]
+
     def __init__(self, ip, port, max_connections):
         super().__init__(ip, port, max_connections)
+        self.routes = [self._route_send_file]
 
-    def _handle_message(self, sock: socket.socket, message: str, data: bytes):
-        ...
+    _decode_data    = lambda _, data: http.decode_data(data)
+    _encode_message = lambda _, message: http.encode_message(message)
 
     def _handle_writable(self, output: socket.socket):
         ...
 
+    def _intercept_message(self, conn, message):
+        ...
+    
+    def _handle_message(self, conn, message, data):
+        ...
+
     def _manage_message(self, conn: socket.socket):
-        data = conn.recv(2048)
+        data = conn.recv(10000)
 
         try:
             if data:
@@ -35,21 +38,17 @@ class HttpServer(Server):
         if len(message.strip()) == 0:
             return
 
-        command = message.split()[0]
-        if command == Methods.GET:
-            logger(conn, "Requisição GET", data)
-            method, filename, *headers = message.split()
-            self._handle_http_get(conn, filename, headers)
-        else:
-            self._handle_message(conn, message, data)
+        if self._intercept_message(conn, message):
+            return
 
-    def _decode_data(self, data: bytes):
-        return data.decode("utf-8")
+        for route in reversed(self.routes):
+            if route(conn=conn, message=message, data=data):
+                return
+        self._handle_message(conn, message, data)
 
-    def _encode_message(self, message: str):
-        return message.encode("utf-8")
-
-    def _handle_http_get(self, conn, filename, headers):
+    @http.HttpRoute(http.Methods.GET)
+    def _route_send_file(self, conn, message, data):
+        _, filename, *_ = message.split()
         filename = "index.html" if filename == "/" else filename[1:]
         pages_path = pathlib.Path("./pages")
         file = pages_path / filename

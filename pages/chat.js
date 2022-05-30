@@ -1,7 +1,23 @@
-socket = null;
+MessageTypes = {
+    MESSAGE: 'M:',
+    WEBCAM: 'W:',
+    AUDIO: 'A:',
+    EXIT: 'E:'
+}
+
+Commands = {
+    CREATE: '/CREATE',
+    JOIN: '/JOIN',
+    EXIT: '/EXIT'
+}
 
 chatElement = document.getElementById("chat");
 chatInputElement = document.getElementById("chat-input");
+
+socket = null;
+
+usersWebcams = {};
+isInChannel = false;
 
 function connect() {
     if (socket != null) {
@@ -39,22 +55,82 @@ function sendMessage(text) {
     }
 }
 
+onWebcamCapture = data => {
+    if (!isInChannel) {
+        return;
+    }
+    console.log(data.length)
+    socket.send(data);
+};
+
 function onOpen(ev) {
     addChatMessage("[SERVER]: Conexão realizada com sucesso!")
     addChatMessage("[SERVER]: Digite /help para descobrir os comandos")
 }
 
 function onMessage(ev) {
-    addChatMessage(ev.data);
+    let msg = ev.data;
+    const equals = com => msg.startsWith(com)
+
+    if (equals(MessageTypes.WEBCAM))
+        return manageWebcamResponse(msg);
+    if (equals(MessageTypes.EXIT))
+        return manageUserExit(msg);
+    if (equals('/'))
+        return manageCommandResponse(msg);
+    if (equals(MessageTypes.MESSAGE))
+        msg = msg.slice(2, msg.length);
+    addChatMessage(msg);
 }
 
 function onClose(ev) {
+    isInChannel = false;
+    deleteAllUsersWebcams();
     addChatMessage("[SERVER]: Desconectando...");
 }
 
 function onError(ev) {
     console.log(ev);
+    isInChannel = false;
     addChatMessage("[SERVER_ERROR]" + ev.toString());
+}
+
+function manageCommandResponse(msg) {
+    const equals = com => msg.startsWith(com);
+    isInChannel = !equals(Commands.EXIT);
+
+    if (!isInChannel) {
+        deleteAllUsersWebcams();
+    }
+}
+
+function manageWebcamResponse(msg) {
+    let [username, index] = getUsername(msg);
+    let img = usersWebcams[username];
+    const dataUrl = msg.slice(index+2, msg.length);
+
+    if (!img) {
+        img = createWebcamElement(dataUrl)
+        usersWebcams[username] = img;
+    }
+    setImgSrc(img, dataUrl);
+}
+
+function manageUserExit(msg) {
+    let [username, _] = getUsername(msg);
+    
+    if (usersWebcams[username]) {
+        deleteImg(usersWebcams[username]);
+        delete usersWebcams[username];
+    }
+    addChatMessage(msg.slice(2, msg.length));
+}
+
+function deleteAllUsersWebcams() {
+    for ([username, webcam] of Object.entries(usersWebcams)){
+        deleteImg(webcam);
+        delete usersWebcams[username];
+    }
 }
 
 function addChatMessage(text, isPersonal = false) {
@@ -78,4 +154,13 @@ function addChatMessage(text, isPersonal = false) {
 
 function socketClosed() {
     return socket == null || socket.readyState == socket.CLOSED;
+}
+
+function getUsername(msg) {
+    let i = 3;
+    let username = '';
+    while (msg[i] != ']' && msg[i+1] != ':') {
+        username += msg[i++];
+    }
+    return [username, i];
 }

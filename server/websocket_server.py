@@ -1,22 +1,15 @@
-import sys
-from typing import TextIO
 from .http_server import HttpServer
-from . import websocket as ws
+from . import websocket as ws, http
 
 
 class WebSocketServer(HttpServer):
     def __init__(self, ip, port, max_connections):
         super().__init__(ip, port, max_connections)
-        self.inputs.append(sys.stdin)
+        self.routes.append(self._handle_handshake)
 
-    def _handle_http_get(self, conn, filename, headers):
-        if filename == "/chat":
-            self._handle_handshake(conn, headers)
-        else:
-            super()._handle_http_get(conn, filename, headers)
-
-    def _handle_handshake(self, conn, headers):
-        client_key = ws.get_key(headers)
+    @http.HttpRoute(route='/chat')
+    def _handle_handshake(self, conn, message, data):
+        client_key = ws.get_key(message.split())
 
         if not client_key:
             return self._close_connection(conn)
@@ -24,25 +17,17 @@ class WebSocketServer(HttpServer):
         response = ws.build_handshake_response(client_key)
         conn.sendall(response)
 
+    _encode_message = lambda _, message: ws.encode_message(message)
+
     def _decode_data(self, data: bytes):
         if data[0] == ws.Codes.CLOSE:
             raise Exception("Fechar conexão")
         if data[0] == ws.Codes.MESSAGE:
             return ws.decode_data(data)
         else:
-            print("\n", data, "\n")
             return super()._decode_data(data)
 
-    def _encode_message(self, message: str):
-        return ws.encode_message(message)
-
-    def _handle_message(self, sock, message: str, data: bytes):
+    def _handle_message(self, conn, message, data):
         print("-" * 50)
         print(message)
         print("-" * 50)
-
-    def _manage_textio(self, input: TextIO):
-        msg = '[SERVER]: ' + input.readline()
-
-        for client in self.clients:
-            self.send_message(client, msg)

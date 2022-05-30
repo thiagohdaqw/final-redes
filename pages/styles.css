@@ -2,11 +2,10 @@ main {
     display: flex;
     flex-direction: column;
     align-items: center;
+    width: 100%;
 }
 
 body {
-    width: 100vw;
-    height: 100vh;
     background-image: linear-gradient(lightgrey, grey);
     display: flex;
     justify-content: center;
@@ -42,4 +41,17 @@ body {
 #chat-input {
     width: 500px;
     font-size: 24px;
+}
+
+.webcam {
+    width: 300px;
+    height: 200px;
+    display: block;
+}
+
+#webcams {
+    display: flex;
+    width: 100%;
+    margin-top: 20px;
+    justify-content: space-around;
 }

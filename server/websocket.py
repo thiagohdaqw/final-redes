@@ -58,13 +58,13 @@ def decode_bytes(payload, mask):
         decoded = value ^ mask[index % 4]
         yield chr(decoded)
 
-def encode_message(message: str) -> bytes:
-    msg_bytes = message.encode('utf-8')
+def encode_message(message) -> bytes:
+    msg_bytes = str(message).encode('utf-8')
     msg_length = len(msg_bytes)
 
     op = int_to_bytes(Codes.MESSAGE)
 
-    if msg_length <= PAYLOAD_MAX_LENGTH:
+    if msg_length < PAYLOAD_MAX_LENGTH:
         return op + int_to_bytes(msg_length) + msg_bytes
     else:
         len1, len2 = int_to_bytes(msg_length, 2)

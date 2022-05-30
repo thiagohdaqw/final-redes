@@ -1,6 +1,6 @@
 import socket
 from .websocket_server import WebSocketServer
-from .channel import Channels
+from .channel import Channels, MessageType
 
 class ChannelServer(WebSocketServer):
     channels: Channels
@@ -14,6 +14,13 @@ class ChannelServer(WebSocketServer):
 
     def _handle_message(self, conn: socket.socket, message: str, data: bytes):
         self.channels.manage_commands(conn, message)
+
+    def _intercept_message(self, conn, message):
+        webcam_data = "data:image/jpeg;"
+        if message.startswith(webcam_data):
+            self.channels.manage_data(conn, message, MessageType.WEBCAM)
+            return True
+        return False
 
     def _close_connection(self, conn):
         self.channels.exit_channel(conn)
