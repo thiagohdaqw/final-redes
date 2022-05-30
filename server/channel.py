@@ -2,6 +2,7 @@ import socket
 import queue
 from dataclasses import dataclass, field
 from typing import Callable, NamedTuple
+from enum import Enum
 
 
 class Command(NamedTuple):
@@ -18,7 +19,7 @@ class Command(NamedTuple):
 class Commands:
     CREATE   = Command('/CREATE', '<NomeCanal> <CapacidadeDeUsuarios> <NomeUsuario>', 'Create Channel')
     JOIN     = Command('/JOIN', '<NomeCanal> <NomeUsuario>', 'Join Channel')
-    OUT      = Command('/OUT', '', 'Exit Channel')
+    EXIT      = Command('/EXIT', '', 'Exit Channel')
     CHANNELS = Command('/CHANNELS', '', 'List available channels')
     LIST     = Command('/LIST', '', 'List user in channel')
     HELP     = Command('/HELP', '', 'Show all commands description')
@@ -36,10 +37,15 @@ class Channel:
     capacity: int
     users : list[User] = field(default_factory=list)
 
+class MessageType(Enum):
+    MESSAGE = 'M'
+    WEBCAM  = 'W'
+    AUDIO   = 'A'
+
 
 @dataclass
 class Channels:
-    send_message: Callable[[socket.socket, str], None]
+    send_message: Callable
     outputs: list[socket.socket]
     channels: dict[str, Channel] = field(default_factory=dict)
     users: dict[socket.socket, User] = field(default_factory=dict)
@@ -61,7 +67,7 @@ class Channels:
 
         if command == Commands.LIST:
             self.list_users(conn)
-        elif command == Commands.OUT:
+        elif command == Commands.EXIT:
             self.exit_channel(conn)
         else:
             self.enqueue_message(conn, message)
@@ -90,7 +96,7 @@ class Channels:
         self.users[conn] = user
         self.channels[channel_name].users.append(user)
 
-        self.enqueue_message(conn, "Entrou na sala.\n")
+        self.send_message(conn, Commands.CREATE)
 
     def join_channel(self, conn, message):
         if len(message.split()) != 3:
@@ -121,36 +127,22 @@ class Channels:
         channel_typed.users.append(user)
 
         self.enqueue_message(conn, "Entrou na sala.\n")
+        self.send_message(conn, Commands.JOIN)
         
     def exit_channel(self, conn):
         if not self.is_user_in_channel(conn):
             return
 
         user = self.users[conn]
-        user.messages.put("Saiu da sala\n")
+        user.messages.put(("Saiu da sala\n", MessageType.MESSAGE))
         self.send_channel_message(conn)
         if len(self.channels[user.channel].users) > 1:
             self.channels[user.channel].users.remove(user)
         else:
             del self.channels[user.channel]
         del self.users[conn]
-        
-    def enqueue_message(self, conn, message):
-        user = self.users[conn]
-        user.messages.put(message)
-        if conn not in self.outputs:
-            self.outputs.append(conn)
+        self.send_message(conn, Commands.EXIT)
 
-    def send_channel_message(self, conn):
-        try:
-            user = self.users[conn]
-            next_msg = f"[{user.username}]: {user.messages.get_nowait()}"
-            
-            for user in filter(lambda c: c.connection != conn, self.channels[user.channel].users):
-                self.send_message(user.connection, next_msg)
-        except queue.Empty:
-            self.outputs.remove(conn)
-    
     def explain_commands(self, conn):
         formatter = lambda c: f'{c} - {c.help}' 
         commands = (getattr(Commands, name) for name in dir(Commands) if not name.startswith('_'))
@@ -185,3 +177,28 @@ class Channels:
             if user.username == username:
                 return True
         return False
+
+    def manage_data(self, conn, data, type):
+        if not self.is_user_in_channel(conn):
+            return
+
+        self.enqueue_message(conn, data, type)
+
+    def enqueue_message(self, conn, message, type = MessageType.MESSAGE):
+        user = self.users[conn]
+        user.messages.put((message, type))
+        if conn not in self.outputs:
+            self.outputs.append(conn)
+    
+    def send_channel_message(self, conn):
+        try:
+            user = self.users[conn]
+            message, type = user.messages.get_nowait()
+            
+            prefix = f'{type.value}:[{user.username}]: '
+            
+            for user in filter(lambda c: c.connection != conn, self.channels[user.channel].users):
+                self.send_message(user.connection, prefix, message)
+
+        except queue.Empty:
+            self.outputs.remove(conn)
